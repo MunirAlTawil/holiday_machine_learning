@@ -1,0 +1,150 @@
+@startuml Holiday_Itinerary_PostgreSQL_ERD
+
+!define TABLE(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define PK_COL(x) <b><color:red>x</color></b>
+!define FK_COL(x) <i><color:blue>x</color></i>
+
+title Holiday Itinerary - PostgreSQL Entity Relationship Diagram
+
+' ============================================
+' Table: data_source
+' ============================================
+TABLE(data_source, "data_source\nData Source Metadata") {
+  PK_COL(id) : SERIAL <<PK>>
+  --
+  name : TEXT <<UNIQUE, NOT NULL>>
+  description : TEXT
+  created_at : TIMESTAMP <<DEFAULT NOW()>>
+}
+
+' ============================================
+' Table: poi
+' ============================================
+TABLE(poi, "poi\nPoint of Interest") {
+  PK_COL(id) : TEXT <<PK>>
+  --
+  label : TEXT
+  description : TEXT
+  latitude : DOUBLE PRECISION <<NOT NULL>>
+  longitude : DOUBLE PRECISION <<NOT NULL>>
+  uri : TEXT
+  type : TEXT
+  city : TEXT
+  department_code : TEXT
+  theme : TEXT
+  last_update : TIMESTAMP
+  raw_json : JSONB
+  FK_COL(source_id) : INTEGER <<FK>>
+  created_at : TIMESTAMP <<DEFAULT NOW()>>
+  --
+  .. Constraints ..
+  chk_latitude_range : CHECK (latitude BETWEEN -90 AND 90)
+  chk_longitude_range : CHECK (longitude BETWEEN -180 AND 180)
+}
+
+' ============================================
+' Table: category
+' ============================================
+TABLE(category, "category\nPOI Categories") {
+  PK_COL(id) : SERIAL <<PK>>
+  --
+  name : TEXT <<UNIQUE, NOT NULL>>
+  description : TEXT
+  created_at : TIMESTAMP <<DEFAULT NOW()>>
+}
+
+' ============================================
+' Table: poi_category (Junction Table)
+' ============================================
+TABLE(poi_category, "poi_category\nPOI-Category Junction") {
+  FK_COL(poi_id) : TEXT <<PK, FK>>
+  FK_COL(category_id) : INTEGER <<PK, FK>>
+}
+
+' ============================================
+' Table: pipeline_runs
+' ============================================
+TABLE(pipeline_runs, "pipeline_runs\nETL Run Tracking") {
+  PK_COL(run_id) : TEXT <<PK>>
+  --
+  run_type : TEXT <<NOT NULL>>
+  started_at : TIMESTAMP <<NOT NULL>>
+  finished_at : TIMESTAMP
+  status : TEXT <<NOT NULL>>
+  fetched_count : INTEGER <<DEFAULT 0>>
+  processed_count : INTEGER <<DEFAULT 0>>
+  inserted_count : INTEGER <<DEFAULT 0>>
+  updated_count : INTEGER <<DEFAULT 0>>
+  skipped_count : INTEGER <<DEFAULT 0>>
+  error_message : TEXT
+}
+
+' ============================================
+' Relationships
+' ============================================
+
+' data_source (1) --< (0..*) poi
+data_source ||--o{ poi : "has"
+note right of poi::source_id
+  Foreign Key:
+  poi.source_id → data_source.id
+  ON DELETE SET NULL
+end note
+
+' poi (1) --< (0..*) poi_category
+poi ||--o{ poi_category : "belongs to"
+note right of poi_category::poi_id
+  Foreign Key:
+  poi_category.poi_id → poi.id
+  ON DELETE CASCADE
+end note
+
+' category (1) --< (0..*) poi_category
+category ||--o{ poi_category : "categorizes"
+note right of poi_category::category_id
+  Foreign Key:
+  poi_category.category_id → category.id
+  ON DELETE CASCADE
+end note
+
+' ============================================
+' Indexes (shown as notes)
+' ============================================
+note right of poi
+  **Indexes:**
+  • idx_poi_location (latitude, longitude)
+  • idx_poi_source_id (source_id)
+  • idx_poi_last_update (last_update)
+  • idx_poi_type (type)
+  • idx_poi_theme (theme)
+  • idx_poi_text_search (GIN, full-text)
+end note
+
+note right of poi_category
+  **Indexes:**
+  • idx_poi_category_poi_id
+  • idx_poi_category_category_id
+end note
+
+note right of pipeline_runs
+  **Indexes:**
+  • idx_etl_run_type (run_type)
+  • idx_etl_run_status (status)
+  • idx_etl_run_started_at (started_at)
+end note
+
+' ============================================
+' Legend
+' ============================================
+legend right
+  |<#FFAAAA>**Table**|
+  |<b><color:red>PK</color></b> = Primary Key|
+  |<i><color:blue>FK</color></i> = Foreign Key|
+  |**Cardinality:**|
+  ||| = One (1)|
+  |o{ = Many (0..*)|
+  |-- = Relationship|
+endlegend
+
+@enduml
+

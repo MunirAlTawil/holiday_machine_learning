@@ -1,0 +1,80 @@
+%% Architecture Diagram - Holiday Itinerary Data Engineering Project
+%% Mermaid format for PNG generation
+
+graph TB
+    subgraph External["🌐 External Services"]
+        API[DataTourisme API<br/>https://api.datatourisme.fr<br/>REST API with API Key]
+    end
+
+    subgraph ETL["🔄 ETL Pipeline"]
+        direction TB
+        Extract[Extract Step<br/>fetch_pois_from_api<br/>Rate Limiting: 10 req/s<br/>Pagination Support]
+        Transform[Transform Step<br/>transform_poi<br/>Coordinate Extraction<br/>Data Normalization]
+        Load[Load Step<br/>load_pois_to_database<br/>Smart UPSERT Logic<br/>Batch Processing]
+    end
+
+    subgraph Scheduler["⏰ Cron Scheduler"]
+        Cron[Cron Daemon<br/>Schedule: 0 * * * *<br/>Hourly Execution]
+        ETLScript[run_etl.sh<br/>Batch ETL Pipeline]
+        GraphScript[Graph Loader<br/>run_graph_load]
+    end
+
+    subgraph Storage["💾 Data Storage"]
+        PostgreSQL[(PostgreSQL 16<br/>Port: 5432<br/>Tables: poi, pipeline_runs<br/>data_source)]
+        Neo4j[(Neo4j 5.15<br/>Ports: 7474 HTTP<br/>7687 Bolt<br/>Graph Database)]
+    end
+
+    subgraph Services["🚀 Application Services"]
+        FastAPI[FastAPI Service<br/>Port: 8000<br/>REST API<br/>Auto-migration on startup]
+        Dashboard[Streamlit Dashboard<br/>Port: 8501<br/>Interactive UI<br/>Multi-page App]
+    end
+
+    subgraph Users["👥 Users"]
+        APIUser[API Consumers<br/>REST Clients]
+        DashboardUser[Dashboard Users<br/>Web Browser]
+    end
+
+    %% External to ETL
+    API -->|HTTPS<br/>X-API-Key Header<br/>JSON Response| Extract
+
+    %% ETL Flow
+    Extract -->|Raw POI Objects| Transform
+    Transform -->|Cleaned POI Data| Load
+
+    %% ETL to Storage
+    Load -->|UPSERT<br/>Insert/Update| PostgreSQL
+    Load -->|Pipeline Run Tracking| PostgreSQL
+
+    %% Scheduler to ETL
+    Cron -->|Hourly Trigger| ETLScript
+    ETLScript -->|Executes| Extract
+    ETLScript -->|After ETL| GraphScript
+
+    %% Graph Loader
+    PostgreSQL -->|Read POIs| GraphScript
+    GraphScript -->|MERGE Nodes/Relationships| Neo4j
+
+    %% Storage to Services
+    PostgreSQL -->|SQL Queries<br/>Geospatial Queries| FastAPI
+    Neo4j -->|Cypher Queries<br/>Graph Traversals| FastAPI
+
+    %% Services to Users
+    FastAPI -->|REST API<br/>JSON Responses| APIUser
+    FastAPI -->|HTTP API<br/>CORS Enabled| Dashboard
+    Dashboard -->|Interactive UI<br/>Charts & Maps| DashboardUser
+
+    %% Styling
+    classDef external fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef etl fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef storage fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef service fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef scheduler fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef user fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+
+    class API external
+    class Extract,Transform,Load etl
+    class PostgreSQL,Neo4j storage
+    class FastAPI,Dashboard service
+    class Cron,ETLScript,GraphScript scheduler
+    class APIUser,DashboardUser user
+

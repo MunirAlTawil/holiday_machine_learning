@@ -1,0 +1,138 @@
+<mxfile host="app.diagrams.net" modified="2024-01-01T00:00:00.000Z" agent="5.0" version="21.0.0" etag="diagram" type="device">
+  <diagram name="Holiday Itinerary Architecture" id="architecture">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- External Services -->
+        <mxCell id="external-group" value="External Services" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e1f5ff;strokeColor=#01579b;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="280" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="datatourisme-api" value="DataTourisme API&#xa;https://api.datatourisme.fr&#xa;REST API with API Key&#xa;Rate Limits: 10 req/s, ≤1000 req/hour" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;strokeColor=#01579b;fontSize=11;" vertex="1" parent="external-group">
+          <mxGeometry x="20" y="40" width="240" height="70" as="geometry" />
+        </mxCell>
+        
+        <!-- ETL Pipeline -->
+        <mxCell id="etl-group" value="ETL Pipeline" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="360" y="40" width="400" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="extract" value="Extract Step&#xa;fetch_pois_from_api()&#xa;• Rate Limiting (10 req/s)&#xa;• Pagination Support&#xa;• Retry Logic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;" vertex="1" parent="etl-group">
+          <mxGeometry x="20" y="40" width="160" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="transform" value="Transform Step&#xa;transform_poi()&#xa;• Coordinate Extraction&#xa;• Data Normalization&#xa;• Validation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;" vertex="1" parent="etl-group">
+          <mxGeometry x="200" y="40" width="160" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="load" value="Load Step&#xa;load_pois_to_database()&#xa;• Smart UPSERT Logic&#xa;• Batch Processing&#xa;• Pipeline Run Tracking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;" vertex="1" parent="etl-group">
+          <mxGeometry x="110" y="160" width="160" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Cron Scheduler -->
+        <mxCell id="scheduler-group" value="Cron Scheduler" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff9c4;strokeColor=#f57f17;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="800" y="40" width="320" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="cron" value="Cron Daemon&#xa;Schedule: 0 * * * *&#xa;Hourly Execution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff59d;strokeColor=#f57f17;fontSize=11;" vertex="1" parent="scheduler-group">
+          <mxGeometry x="20" y="40" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="etl-script" value="run_etl.sh&#xa;Batch ETL Pipeline&#xa;--limit-per-run 500&#xa;--max-pages 5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff59d;strokeColor=#f57f17;fontSize=11;" vertex="1" parent="scheduler-group">
+          <mxGeometry x="20" y="140" width="140" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="graph-script" value="Graph Loader&#xa;run_graph_load&#xa;--batch-size 100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff59d;strokeColor=#f57f17;fontSize=11;" vertex="1" parent="scheduler-group">
+          <mxGeometry x="180" y="140" width="120" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Data Storage -->
+        <mxCell id="storage-group" value="Data Storage" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="360" y="360" width="760" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="PostgreSQL 16&#xa;Port: 5432&#xa;Tables:&#xa;• poi (main data)&#xa;• pipeline_runs (ETL tracking)&#xa;• data_source&#xa;• category, poi_category" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1bee7;strokeColor=#4a148c;fontSize=11;" vertex="1" parent="storage-group">
+          <mxGeometry x="40" y="40" width="320" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="neo4j" value="Neo4j 5.15 Community&#xa;Ports: 7474 (HTTP), 7687 (Bolt)&#xa;Nodes: POI, Type, City, Department&#xa;Relationships:&#xa;HAS_TYPE, IN_CITY, IN_DEPARTMENT" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1bee7;strokeColor=#4a148c;fontSize=11;" vertex="1" parent="storage-group">
+          <mxGeometry x="400" y="40" width="320" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- Application Services -->
+        <mxCell id="services-group" value="Application Services" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#1b5e20;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="360" y="600" width="760" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="fastapi" value="FastAPI Service&#xa;Port: 8000&#xa;REST API Endpoints:&#xa;• /pois, /stats, /charts&#xa;• /itinerary/build&#xa;• /graph/summary, /graph/sync&#xa;• /pipeline/last-run&#xa;Auto-migration on startup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=11;" vertex="1" parent="services-group">
+          <mxGeometry x="40" y="40" width="320" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard" value="Streamlit Dashboard&#xa;Port: 8501&#xa;Multi-page App:&#xa;• Overview (KPIs)&#xa;• Types Chart, Updates Chart&#xa;• Data Quality&#xa;• POI Explorer&#xa;• Map Explorer&#xa;• Itinerary Builder&#xa;• Graph Statistics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#1b5e20;fontSize=11;" vertex="1" parent="services-group">
+          <mxGeometry x="400" y="40" width="320" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- Users -->
+        <mxCell id="users-group" value="Users" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#880e4f;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="600" width="400" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="api-user" value="API Consumers&#xa;REST Clients&#xa;Mobile Apps&#xa;Third-party Integrations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#880e4f;fontSize=11;" vertex="1" parent="users-group">
+          <mxGeometry x="20" y="40" width="160" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard-user" value="Dashboard Users&#xa;Web Browser&#xa;Data Analysts&#xa;Business Users" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8bbd0;strokeColor=#880e4f;fontSize=11;" vertex="1" parent="users-group">
+          <mxGeometry x="220" y="40" width="160" height="140" as="geometry" />
+        </mxCell>
+        
+        <!-- Connections -->
+        <!-- External to ETL -->
+        <mxCell id="conn1" value="HTTPS&#xa;X-API-Key&#xa;JSON Response" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#01579b;fontSize=10;" edge="1" parent="1" source="datatourisme-api" target="extract">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- ETL Flow -->
+        <mxCell id="conn2" value="Raw POI Objects" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#e65100;fontSize=10;" edge="1" parent="1" source="extract" target="transform">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn3" value="Cleaned POI Data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#e65100;fontSize=10;" edge="1" parent="1" source="transform" target="load">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- ETL to Storage -->
+        <mxCell id="conn4" value="UPSERT&#xa;Insert/Update" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4a148c;fontSize=10;" edge="1" parent="1" source="load" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Scheduler to ETL -->
+        <mxCell id="conn5" value="Hourly Trigger" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#f57f17;fontSize=10;" edge="1" parent="1" source="cron" target="etl-script">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn6" value="Executes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#f57f17;fontSize=10;" edge="1" parent="1" source="etl-script" target="extract">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn7" value="After ETL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#f57f17;fontSize=10;" edge="1" parent="1" source="etl-script" target="graph-script">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Graph Loader -->
+        <mxCell id="conn8" value="Read POIs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4a148c;fontSize=10;" edge="1" parent="1" source="postgres" target="graph-script">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn9" value="MERGE&#xa;Nodes/Relationships" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#4a148c;fontSize=10;" edge="1" parent="1" source="graph-script" target="neo4j">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Storage to Services -->
+        <mxCell id="conn10" value="SQL Queries&#xa;Geospatial" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1b5e20;fontSize=10;" edge="1" parent="1" source="postgres" target="fastapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn11" value="Cypher Queries&#xa;Graph Traversals" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1b5e20;fontSize=10;" edge="1" parent="1" source="neo4j" target="fastapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <!-- Services to Users -->
+        <mxCell id="conn12" value="REST API&#xa;JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#880e4f;fontSize=10;" edge="1" parent="1" source="fastapi" target="api-user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn13" value="HTTP API&#xa;CORS Enabled" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#1b5e20;fontSize=10;" edge="1" parent="1" source="fastapi" target="dashboard">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn14" value="Interactive UI&#xa;Charts &amp; Maps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#880e4f;fontSize=10;" edge="1" parent="1" source="dashboard" target="dashboard-user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+

@@ -1,0 +1,84 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including cron
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    curl \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY src/ ./src/
+COPY sql/ ./sql/
+COPY pipelines/ ./pipelines/
+
+# Create wrapper script to run ETL with environment variables
+# This script sources environment variables from a file created at container startup
+RUN echo '#!/bin/bash\n\
+set -e\n\
+# Source environment variables file if it exists\n\
+if [ -f /app/.env.cron ]; then\n\
+    set -a\n\
+    source /app/.env.cron\n\
+    set +a\n\
+fi\n\
+cd /app\n\
+echo "============================================================"\n\
+echo "Running Batch ETL Pipeline..."\n\
+echo "============================================================"\n\
+python -m src.pipelines.batch_etl --limit-per-run 500 --max-pages 5 --since-hours 24\n\
+echo ""\n\
+echo "============================================================"\n\
+echo "Running Graph Loader..."\n\
+echo "============================================================"\n\
+python -m src.pipelines.run_graph_load --batch-size 100\n\
+' > /app/run_etl.sh && \
+    chmod +x /app/run_etl.sh
+
+# Copy crontab file to /etc/cron.d/ with proper format and permissions
+# Convert CRLF to LF (handle Windows line endings) and ensure newline at end
+COPY docker/cron/crontab /tmp/crontab
+RUN sed -i 's/\r$//' /tmp/crontab && \
+    echo "" >> /tmp/crontab && \
+    cp /tmp/crontab /etc/cron.d/etl-cron && \
+    chmod 0644 /etc/cron.d/etl-cron && \
+    rm /tmp/crontab
+
+# Create log file with proper permissions
+RUN touch /var/log/cron.log && chmod 666 /var/log/cron.log
+
+# Create entrypoint script to load environment and start cron
+# This script writes environment variables to a file that cron jobs can source
+RUN echo '#!/bin/bash\n\
+set -e\n\
+# Ensure log file exists and is writable\n\
+touch /var/log/cron.log\n\
+chmod 666 /var/log/cron.log\n\
+# Write environment variables to file for cron jobs (in export format)\n\
+printenv | grep -E "(POSTGRES|DATABASE|DATATOURISME|NEO4J)" | sed "s/^/export /" > /app/.env.cron || true\n\
+# Verify cron.d file exists and show its contents\n\
+echo "Cron configuration file:"\n\
+cat /etc/cron.d/etl-cron\n\
+# Start cron in foreground\n\
+echo "Starting cron daemon..."\n\
+cron\n\
+# Wait a moment for cron to start\n\
+sleep 1\n\
+# Tail the log file\n\
+echo "Tailing cron log file..."\n\
+tail -f /var/log/cron.log\n\
+' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
+# Run entrypoint script
+CMD ["/app/entrypoint.sh"]
+

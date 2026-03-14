@@ -1,0 +1,89 @@
+@startuml Holiday_Itinerary_Architecture
+
+!define RECTANGLE class
+
+package "Data Sources" {
+  [DataTourisme API] as DataTourisme
+}
+
+package "Extraction Layer" {
+  [Batch ETL Pipeline] as ETL
+  [Graph Loader] as GraphLoader
+}
+
+package "Storage Layer" {
+  database "PostgreSQL" as Postgres {
+    [poi table] as POITable
+    [pipeline_runs table] as PipelineRuns
+  }
+  database "Neo4j" as Neo4j {
+    [POI nodes] as POINodes
+    [Type nodes] as TypeNodes
+    [City nodes] as CityNodes
+    [Department nodes] as DeptNodes
+  }
+}
+
+package "API Layer" {
+  [FastAPI Application] as API {
+    [REST Endpoints] as Endpoints
+    [Analytics Functions] as Analytics
+  }
+}
+
+package "Frontend Layer" {
+  [Streamlit Dashboard] as Dashboard
+}
+
+package "Scheduler" {
+  [Cron Scheduler] as Scheduler
+}
+
+' Data flow
+DataTourisme --> ETL : "Fetch POI data"
+ETL --> Postgres : "Load POIs"
+Postgres --> GraphLoader : "Read POIs"
+GraphLoader --> Neo4j : "Create nodes/relationships"
+
+' API access
+Postgres --> API : "Query POIs"
+Neo4j --> API : "Query graph stats"
+API --> Dashboard : "Serve data"
+
+' Scheduler
+Scheduler --> ETL : "Hourly trigger"
+Scheduler --> GraphLoader : "After ETL"
+
+' API Endpoints
+Endpoints --> Analytics : "Use analytics"
+Analytics --> Postgres : "Query data"
+
+note right of Postgres
+  **PostgreSQL Schema:**
+  - poi (id, label, type, city, department_code, lat, lng, ...)
+  - pipeline_runs (tracking)
+  - Indexes on location, type, last_update
+end note
+
+note right of Neo4j
+  **Neo4j Graph Model:**
+  - Nodes: :POI, :Type, :City, :Department
+  - Relationships: 
+    - (:POI)-[:HAS_TYPE]->(:Type)
+    - (:POI)-[:IN_CITY]->(:City)
+    - (:POI)-[:IN_DEPARTMENT]->(:Department)
+end note
+
+note right of API
+  **API Endpoints:**
+  - GET /health
+  - GET /pois (pagination, search, filter)
+  - GET /pois/geojson
+  - GET /stats
+  - GET /charts/types
+  - GET /graph/summary
+  - POST /graph/sync
+end note
+
+@enduml
+
